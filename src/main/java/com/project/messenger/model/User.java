@@ -1,10 +1,7 @@
 package com.project.messenger.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,6 +10,8 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+@Entity
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor

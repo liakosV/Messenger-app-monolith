@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Entity
+@Table(name = "conversations")
 @Getter
 @Setter
 @NoArgsConstructor
