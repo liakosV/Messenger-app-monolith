@@ -3,7 +3,9 @@ package com.project.messenger.repository;
 import com.project.messenger.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -17,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     Optional<User> findByUsernameOrEmailOrPhoneNumber(String username, String email, String phoneNumber);
+
+    List<User> findAllByUuidIn(Set<UUID> uuids);
 
     boolean existsByUsername(String username);
 
