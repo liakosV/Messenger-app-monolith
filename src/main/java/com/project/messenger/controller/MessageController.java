@@ -3,10 +3,12 @@ package com.project.messenger.controller;
 import com.project.messenger.dto.message.MessageInsertDto;
 import com.project.messenger.dto.message.MessageReadDto;
 import com.project.messenger.dto.message.MessageUpdateDto;
+import com.project.messenger.model.User;
 import com.project.messenger.service.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,10 +24,10 @@ public class MessageController {
     @PostMapping("/conversations/{conversationUuid}/messages")
     public ResponseEntity<MessageReadDto> sendMessage(
             @PathVariable UUID conversationUuid,
-            @RequestParam UUID senderUuid,
+            @AuthenticationPrincipal User loggedInUser,
             @RequestBody @Valid MessageInsertDto insertDto
             ) {
-        MessageReadDto readDto = messageService.sendMessage(conversationUuid, senderUuid, insertDto);
+        MessageReadDto readDto = messageService.sendMessage(conversationUuid, loggedInUser.getUuid(), insertDto);
 
         return ResponseEntity.ok(readDto);
     }
@@ -34,9 +36,9 @@ public class MessageController {
     public ResponseEntity<MessageReadDto> editMessage(
             @Valid @RequestBody MessageUpdateDto updateDto,
             @PathVariable UUID messageUuid,
-            @RequestParam UUID loggedInUser
+            @AuthenticationPrincipal User loggedInUser
             ) {
-        MessageReadDto readDto = messageService.editMessage(updateDto, messageUuid, loggedInUser);
+        MessageReadDto readDto = messageService.editMessage(updateDto, messageUuid, loggedInUser.getUuid());
 
         return ResponseEntity.ok(readDto);
     }
@@ -44,9 +46,9 @@ public class MessageController {
     @DeleteMapping("/messages/{messageUuid}")
     public ResponseEntity<Void> deleteMessage(
             @PathVariable UUID messageUuid,
-            @RequestParam UUID loggedInUser
+            @AuthenticationPrincipal User loggedInUser
     ) {
-        messageService.deleteMessage(messageUuid, loggedInUser);
+        messageService.deleteMessage(messageUuid, loggedInUser.getUuid());
 
         return ResponseEntity.noContent().build();
     }

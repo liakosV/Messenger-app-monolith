@@ -13,6 +13,7 @@ import com.project.messenger.repository.ConversationRepository;
 import com.project.messenger.repository.MessageRepository;
 import com.project.messenger.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class MessageService {
      * @throws AppObjectNotFoundException if the conversation or sender does not exist
      * @throws AppObjectAccessDeniedException if the sender is not a participant in the conversation
      */
+    @PreAuthorize("principal.uuid == #senderUuid")
     @Transactional
     public MessageReadDto sendMessage(UUID conversationUuid, UUID senderUuid, MessageInsertDto insertDto) {
         Conversation conversation = conversationRepository.findByUuid(conversationUuid)
@@ -69,6 +71,7 @@ public class MessageService {
      * @throws AppObjectNotFoundException if no message exists with the given UUID
      * @throws AppObjectAccessDeniedException if the current user is not the original sender
      */
+    @PreAuthorize("principal.uuid == #currentUserUuid")
     @Transactional
     public MessageReadDto editMessage(MessageUpdateDto updateDto, UUID messageUuid, UUID currentUserUuid) {
         Message message = messageRepository.findByUuid(messageUuid)
@@ -91,6 +94,7 @@ public class MessageService {
      * @throws AppObjectNotFoundException if no message exists with the given UUID
      * @throws AppObjectAccessDeniedException if the current user is not the original sender
      */
+    @PreAuthorize("principal.uuid == #currentUserUuid")
     @Transactional
     public void deleteMessage(UUID messageUuid, UUID currentUserUuid) {
         Message message = messageRepository.findByUuid(messageUuid)
