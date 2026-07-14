@@ -15,10 +15,10 @@ public class MessageMapper {
                 message.getUuid(),
                 message.getContent(),
                 message.getSender().getId(),
-                message.getSender().getUuid().toString(),
+                message.getSender().getUuid(),
                 message.getSender().getUsername(),
                 message.getConversation().getId(),
-                message.getConversation().getUuid().toString(),
+                message.getConversation().getUuid(),
                 message.getCreatedAt(),
                 message.getUpdatedAt()
         );

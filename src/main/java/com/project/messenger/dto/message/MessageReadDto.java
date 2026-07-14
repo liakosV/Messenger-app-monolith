@@ -18,11 +18,11 @@ public class MessageReadDto {
     private String content;
 
     private Long senderId;
-    private String senderUuid;
+    private UUID senderUuid;
     private String senderUsername;
 
     private Long conversationId;
-    private String conversationUuid;
+    private UUID conversationUuid;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
