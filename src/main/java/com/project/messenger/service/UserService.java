@@ -2,12 +2,15 @@ package com.project.messenger.service;
 
 import com.project.messenger.core.exception.AppObjectAlreadyExistsException;
 import com.project.messenger.core.exception.AppObjectNotFoundException;
+import com.project.messenger.core.exception.AppObjectUnauthorizedException;
 import com.project.messenger.dto.user.UserInsertDto;
 import com.project.messenger.dto.user.UserReadDto;
 import com.project.messenger.mapper.UserMapper;
 import com.project.messenger.model.User;
 import com.project.messenger.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Creates a new user after checking that the username, email, and phone number are unique.
@@ -76,15 +80,23 @@ public class UserService {
     }
 
     /**
-     * Deletes a user by UUID.
+     * Deletes the currently authenticated user's account after verifying their password.
+     * The authenticated principal must have the same UUID as {@code userUuid}.
      *
-     * @param uuid the public UUID of the user to delete
-     * @throws AppObjectNotFoundException if no user exists with the given UUID
+     * @param userUuid    the public UUID of the authenticated user
+     * @param rawPassword the unencoded password supplied for account confirmation
+     * @throws AppObjectNotFoundException     if no user exists with the supplied UUID
+     * @throws AppObjectUnauthorizedException if the supplied password is incorrect
      */
+    @PreAuthorize("principal.uuid == #userUuid")
     @Transactional
-    public void deleteUserByUuid(UUID uuid) {
-        User user = userRepository.findByUuid(uuid)
+    public void deleteCurrentUser(UUID userUuid, String rawPassword) {
+        User user = userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new AppObjectNotFoundException("User", "User not found"));
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new AppObjectUnauthorizedException("User", "The password is incorrect");
+        }
 
         userRepository.delete(user);
     }

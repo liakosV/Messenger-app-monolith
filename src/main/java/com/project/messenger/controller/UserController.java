@@ -1,9 +1,13 @@
 package com.project.messenger.controller;
 
+import com.project.messenger.dto.user.DeleteUserRequest;
 import com.project.messenger.dto.user.UserReadDto;
+import com.project.messenger.model.User;
 import com.project.messenger.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,9 +30,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @DeleteMapping("/{userUuid}")
-    public ResponseEntity<Void> deleteUser(@PathVariable UUID userUuid) {
-        userService.deleteUserByUuid(userUuid);
+    @DeleteMapping
+    public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal User loggedInUser, @Valid @RequestBody DeleteUserRequest request) {
+        userService.deleteCurrentUser(loggedInUser.getUuid(), request.password());
         return ResponseEntity.noContent().build();
     }
 }
