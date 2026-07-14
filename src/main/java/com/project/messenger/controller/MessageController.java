@@ -55,13 +55,14 @@ public class MessageController {
 
     @GetMapping("/conversations/{conversationUuid}/messages")
     public ResponseEntity<List<MessageReadDto>> getAllMessagesByConversationUuid(
-            @PathVariable UUID conversationUuid
+            @PathVariable UUID conversationUuid,
+            @AuthenticationPrincipal User loggedInUser
     ) {
-        return ResponseEntity.ok(messageService.getAllMessagesByConversationUuid(conversationUuid));
+        return ResponseEntity.ok(messageService.getAllMessagesByConversationUuid(conversationUuid, loggedInUser.getUuid()));
     }
 
-    @GetMapping("/messages/{messageUuid}")
-    public ResponseEntity<MessageReadDto> getMessage(@PathVariable UUID messageUuid) {
-        return ResponseEntity.ok(messageService.getMessage(messageUuid));
-    }
+//    @GetMapping("/messages/{messageUuid}")
+//    public ResponseEntity<MessageReadDto> getMessage(@PathVariable UUID messageUuid) {
+//        return ResponseEntity.ok(messageService.getMessage(messageUuid));
+//    }
 }

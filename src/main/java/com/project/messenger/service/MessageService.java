@@ -113,27 +113,40 @@ public class MessageService {
      * @param conversationUuid the public UUID of the conversation
      * @return the conversation messages as read DTOs
      */
+    @PreAuthorize("principal.uuid == #currentUserUuid")
     @Transactional(readOnly = true)
-    public List<MessageReadDto> getAllMessagesByConversationUuid(UUID conversationUuid) {
-        return messageRepository.findByConversationUuidOrderByCreatedAt(conversationUuid)
+    public List<MessageReadDto> getAllMessagesByConversationUuid(UUID conversationUuid, UUID currentUserUuid) {
+
+        List<MessageReadDto> messageReadDtos = messageRepository.findByConversationUuidOrderByCreatedAt(conversationUuid)
                 .stream()
                 .map(messageMapper::mapToMessageReadDto)
                 .toList();
+
+        Conversation conversation = conversationRepository.findByUuid(conversationUuid)
+                .orElseThrow(() -> new AppObjectNotFoundException("Conversation", "Conversation not found"));
+
+        if (conversation.getParticipants().stream().noneMatch(participant -> participant.getUuid().equals(currentUserUuid))) {
+            throw new AppObjectAccessDeniedException("Messages", "You can only view messages in the conversations that you are part of");
+        }
+
+        return messageReadDtos;
     }
 
-    /**
-     * Finds a message by UUID.
-     *
-     * @param uuid the public UUID of the message
-     * @return the matching message as a read DTO
-     * @throws AppObjectNotFoundException if no message exists with the given UUID
-     */
-    @Transactional(readOnly = true)
-    public MessageReadDto getMessage(UUID uuid) {
-        return messageRepository.findByUuid(uuid)
-                .map(messageMapper::mapToMessageReadDto)
-                .orElseThrow(() -> new AppObjectNotFoundException("Message", "Message not found"));
-    }
+//    /**
+//     * Finds a message by UUID.
+//     *
+//     * @param messageUuid the public UUID of the message
+//     * @return the matching message as a read DTO
+//     * @throws AppObjectNotFoundException if no message exists with the given UUID
+//     */
+//    @Transactional(readOnly = true)
+//    public MessageReadDto getMessage(UUID messageUuid, UUID currentUserUuid) {
+//        MessageReadDto messageReadDto = messageRepository.findByUuid(messageUuid)
+//                .map(messageMapper::mapToMessageReadDto)
+//                .orElseThrow(() -> new AppObjectNotFoundException("Message", "Message not found"));
+//
+//        return messageReadDto;
+//    }
 
 
 }
