@@ -37,4 +37,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             @Param("userAUuid") UUID userAUuid,
             @Param("userBUuid") UUID userBUuid
     );
+
+    boolean existsByUuidAndParticipantsUuid(
+            UUID conversationUuid,
+            UUID participantUuid
+    );
 }

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Messenger WebSocket Test</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+
+<h2>WebSocket test</h2>
+
+<label>
+    JWT:
+    <input id="token" size="100">
+</label>
+
+<br><br>
+
+<label>
+    Conversation UUID:
+    <input id="conversationUuid" size="50">
+</label>
+
+<br><br>
+
+<button onclick="connect()">Connect</button>
+<button onclick="disconnect()">Disconnect</button>
+
+<hr>
+
+<label>
+    Message:
+    <input id="content" size="60">
+</label>
+
+<button onclick="sendMessage()">Send</button>
+
+<h3>Events</h3>
+<pre id="events"></pre>
+
+<script>
+    let stompClient;
+
+    function log(message) {
+        const events = document.getElementById("events");
+        events.textContent += message + "\n";
+    }
+
+    function connect() {
+        const token = document.getElementById("token").value;
+        const conversationUuid =
+            document.getElementById("conversationUuid").value;
+
+        stompClient = new StompJs.Client({
+            brokerURL: "ws://localhost:8080/ws",
+
+            connectHeaders: {
+                Authorization: "Bearer " + token
+            },
+
+            reconnectDelay: 0,
+
+            debug: function (message) {
+                log("DEBUG: " + message);
+            },
+
+            onConnect: function () {
+                log("CONNECTED");
+
+                stompClient.subscribe(
+                    "/topic/conversations/" + conversationUuid,
+                    function (frame) {
+                        const message = JSON.parse(frame.body);
+                        log("RECEIVED: " + JSON.stringify(message, null, 2));
+                    }
+                );
+
+                log(
+                    "SUBSCRIBED: /topic/conversations/"
+                    + conversationUuid
+                );
+            },
+
+            onStompError: function (frame) {
+                log("STOMP ERROR: " + frame.headers.message);
+                log(frame.body);
+            },
+
+            onWebSocketClose: function (event) {
+                log(
+                    "CONNECTION CLOSED: "
+                    + event.code
+                    + " "
+                    + event.reason
+                );
+            },
+
+            onWebSocketError: function () {
+                log("WEBSOCKET ERROR");
+            }
+        });
+
+        stompClient.activate();
+    }
+
+    function sendMessage() {
+        if (!stompClient || !stompClient.connected) {
+            log("Connect first");
+            return;
+        }
+
+        const conversationUuid =
+            document.getElementById("conversationUuid").value;
+
+        const content =
+            document.getElementById("content").value;
+
+        stompClient.publish({
+            destination:
+                "/app/conversations/"
+                + conversationUuid
+                + "/messages",
+
+            body: JSON.stringify({
+                content: content
+            })
+        });
+
+        log("SENT: " + content);
+    }
+
+    function disconnect() {
+        if (stompClient) {
+            stompClient.deactivate();
+            log("DISCONNECTED");
+        }
+    }
+</script>
+
+</body>
+</html>
