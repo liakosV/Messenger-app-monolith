@@ -7,7 +7,6 @@ import com.project.messenger.dto.conversation.ConversationInsertDto;
 import com.project.messenger.dto.conversation.ConversationReadDto;
 import com.project.messenger.dto.conversation.ConversationSummaryDto;
 import com.project.messenger.mapper.ConversationMapper;
-import com.project.messenger.mapper.UserMapper;
 import com.project.messenger.model.Conversation;
 import com.project.messenger.model.User;
 import com.project.messenger.repository.ConversationRepository;
@@ -26,7 +25,6 @@ public class ConversationService {
     private final ConversationMapper conversationMapper;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
 
     /**
      * Creates a conversation between existing users, or returns an existing private conversation
@@ -89,6 +87,8 @@ public class ConversationService {
 
         conversationRepository.delete(conversation);
     }
+
+    //todo leave conversation method and the delete conversation is only for yourself the messages in the other users can still exists.
 
     /**
      * Finds all conversations where the given user is a participant.
