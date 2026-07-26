@@ -19,9 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -316,5 +314,95 @@ public class MessageServiceTest {
 
         verify(messageRepository).findByUuid(messageUuid);
         verify(messageRepository, never()).delete(message);
+    }
+
+    @Test
+    void getAllMessagesWhenUserIsParticipant() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID userUuid = UUID.randomUUID();
+
+        User user = new User();
+        user.setUuid(userUuid);
+
+        Message firstMessage = new Message();
+        Message secondMessage = new Message();
+
+        MessageReadDto firstDto = mock(MessageReadDto.class);
+        MessageReadDto secondDto = mock(MessageReadDto.class);
+
+
+        Conversation conversation = new Conversation();
+        conversation.setUuid(conversationUuid);
+        conversation.setParticipants(new HashSet<>());
+        conversation.getParticipants().add(user);
+
+        when(messageRepository.findByConversationUuidOrderByCreatedAt(conversationUuid))
+                .thenReturn(List.of(firstMessage, secondMessage));
+
+        when(messageMapper.mapToMessageReadDto(firstMessage))
+                .thenReturn(firstDto);
+
+        when(messageMapper.mapToMessageReadDto(secondMessage))
+                .thenReturn(secondDto);
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        List<MessageReadDto> actualDto = messageService.getAllMessagesByConversationUuid(conversationUuid, userUuid);
+
+        assertEquals(List.of(firstDto, secondDto), actualDto);
+
+        verify(messageRepository).findByConversationUuidOrderByCreatedAt(conversationUuid);
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+
+        verify(messageMapper).mapToMessageReadDto(firstMessage);
+        verify(messageMapper).mapToMessageReadDto(secondMessage);
+    }
+
+    @Test
+    void getAllMessagesWhenConversationDoesNotExist() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID userUuid = UUID.randomUUID();
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.empty());
+
+        AppObjectNotFoundException exception = assertThrows(
+                AppObjectNotFoundException.class,
+                () -> messageService.getAllMessagesByConversationUuid(conversationUuid, userUuid)
+        );
+
+        assertEquals("Conversation not found", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+    }
+
+    @Test
+    void getAllMessagesWhenUserIsNotParticipant() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID currentUserUuid = UUID.randomUUID();
+        UUID participantUuid = UUID.randomUUID();
+
+        User participant = new User();
+        participant.setUuid(participantUuid);
+
+        Conversation conversation = new Conversation();
+        conversation.setUuid(conversationUuid);
+        conversation.setParticipants(new HashSet<>());
+        conversation.getParticipants().add(participant);
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        AppObjectAccessDeniedException exception = assertThrows(
+                AppObjectAccessDeniedException.class,
+                () -> messageService.getAllMessagesByConversationUuid(conversationUuid, currentUserUuid)
+        );
+
+        assertEquals("You can only view messages in the conversations that you are part of", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verifyNoInteractions(messageRepository, messageMapper);
     }
 }
