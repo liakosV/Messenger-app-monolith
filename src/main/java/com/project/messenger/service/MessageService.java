@@ -117,19 +117,23 @@ public class MessageService {
     @Transactional(readOnly = true)
     public List<MessageReadDto> getAllMessagesByConversationUuid(UUID conversationUuid, UUID currentUserUuid) {
 
-        List<MessageReadDto> messageReadDtos = messageRepository.findByConversationUuidOrderByCreatedAt(conversationUuid)
-                .stream()
-                .map(messageMapper::mapToMessageReadDto)
-                .toList();
-
         Conversation conversation = conversationRepository.findByUuid(conversationUuid)
                 .orElseThrow(() -> new AppObjectNotFoundException("Conversation", "Conversation not found"));
 
-        if (conversation.getParticipants().stream().noneMatch(participant -> participant.getUuid().equals(currentUserUuid))) {
-            throw new AppObjectAccessDeniedException("Messages", "You can only view messages in the conversations that you are part of");
+        boolean isParticipant = conversation.getParticipants()
+                .stream()
+                .anyMatch(participant -> participant.getUuid().equals(currentUserUuid));
+
+        if (!isParticipant) {
+            throw new AppObjectAccessDeniedException(
+                    "Messages",
+                    "You can only view messages in the conversations that you are part of");
         }
 
-        return messageReadDtos;
+        return messageRepository.findByConversationUuidOrderByCreatedAt(conversationUuid)
+                .stream()
+                .map(messageMapper::mapToMessageReadDto)
+                .toList();
     }
 
 //    /**
