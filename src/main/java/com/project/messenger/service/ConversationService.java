@@ -51,14 +51,16 @@ public class ConversationService {
             throw new AppObjectNotFoundException("User", "One or more participants not found");
         }
 
-        if (participantUuids.size() == 2) {
-            List<UUID> uuids = participantUuids.stream().toList();
+        Optional<Conversation> existingConversation =
+                conversationRepository.findConversationByExactParticipants(
+                        participantUuids,
+                        participantUuids.size()
+                );
 
-            Optional<Conversation> existingConversation = conversationRepository.findPrivateConversationBetweenUsers(uuids.get(0), uuids.get(1));
-
-            if (existingConversation.isPresent()) {
-                return conversationMapper.mapToConversationReadDto(existingConversation.get());
-            }
+        if (existingConversation.isPresent()) {
+            return conversationMapper.mapToConversationReadDto(
+                    existingConversation.get()
+            );
         }
 
         Conversation conversation = conversationMapper.mapToConversationEntity(new HashSet<>(users));
