@@ -1,9 +1,12 @@
 package com.project.messenger.service;
 
+import com.project.messenger.core.exception.AppObjectAccessDeniedException;
 import com.project.messenger.core.exception.AppObjectInvalidArgumentException;
 import com.project.messenger.core.exception.AppObjectNotFoundException;
 import com.project.messenger.dto.conversation.ConversationInsertDto;
+import com.project.messenger.dto.conversation.ConversationParticipantDto;
 import com.project.messenger.dto.conversation.ConversationReadDto;
+import com.project.messenger.dto.conversation.ConversationSummaryDto;
 import com.project.messenger.mapper.ConversationMapper;
 import com.project.messenger.model.Conversation;
 import com.project.messenger.model.User;
@@ -165,6 +168,207 @@ public class ConversationServiceTest {
         verify(conversationMapper).mapToConversationReadDto(existingConversation);
         verify(conversationRepository, never()).save(any(Conversation.class));
         verify(conversationMapper, never()).mapToConversationEntity(anySet());
+    }
+
+    @Test
+    void deleteConversationWhenLoggedInUserIsParticipant() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        User loggedInUser = new User();
+        loggedInUser.setUuid(loggedInUserUuid);
+
+        Conversation conversation = new Conversation();
+        conversation.setParticipants(Set.of(loggedInUser));
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        conversationService.deleteConversation(conversationUuid, loggedInUserUuid);
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verify(conversationRepository).delete(conversation);
+    }
+
+    @Test
+    void deleteConversationWhenConversationNotFound() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.empty());
+
+        AppObjectNotFoundException exception = assertThrows(
+                AppObjectNotFoundException.class,
+                () -> conversationService.deleteConversation(conversationUuid, loggedInUserUuid)
+        );
+
+        assertEquals("Conversation not found", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verify(conversationRepository, never()).delete(any(Conversation.class));
+    }
+
+    @Test
+    void deleteConversationWhenLoggedInUserIsNotParticipant() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+        UUID otherUserUuid = UUID.randomUUID();
+
+        User otherUser = new User();
+        otherUser.setUuid(otherUserUuid);
+
+        Conversation conversation = new Conversation();
+        conversation.setParticipants(Set.of(otherUser));
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        AppObjectAccessDeniedException exception = assertThrows(
+                AppObjectAccessDeniedException.class,
+                () -> conversationService.deleteConversation(conversationUuid, loggedInUserUuid)
+        );
+
+        assertEquals("You can only delete your own conversations", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verify(conversationRepository, never()).delete(any(Conversation.class));
+    }
+
+    @Test
+    void getAllConversationsForLoggedInUser() {
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        User loggedInUser = new User();
+        loggedInUser.setUuid(loggedInUserUuid);
+
+        Conversation firstConversation = new Conversation();
+        firstConversation.setParticipants(Set.of(loggedInUser));
+
+        Conversation secondConversation = new Conversation();
+        secondConversation.setParticipants(Set.of(loggedInUser));
+
+        ConversationSummaryDto firstDto = mock(ConversationSummaryDto.class);
+        ConversationSummaryDto secondDto = mock(ConversationSummaryDto.class);
+
+        when(userRepository.existsByUuid(loggedInUserUuid))
+                .thenReturn(true);
+
+        when(conversationRepository.findAllByParticipantUuid(loggedInUserUuid))
+                .thenReturn(List.of(firstConversation, secondConversation));
+
+        when(conversationMapper.mapToConversationSummaryDto(firstConversation))
+                .thenReturn(firstDto);
+
+        when(conversationMapper.mapToConversationSummaryDto(secondConversation))
+                .thenReturn(secondDto);
+
+        List<ConversationSummaryDto> actualDtos = conversationService.getAllConversationsForUser(loggedInUserUuid);
+
+        assertEquals(List.of(firstDto, secondDto), actualDtos);
+
+        verify(userRepository).existsByUuid(loggedInUserUuid);
+        verify(conversationRepository).findAllByParticipantUuid(loggedInUserUuid);
+        verify(conversationMapper).mapToConversationSummaryDto(firstConversation);
+        verify(conversationMapper).mapToConversationSummaryDto(secondConversation);
+    }
+
+    @Test
+    void getAllConversationsWhenUserIsNotFound() {
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        when(userRepository.existsByUuid(loggedInUserUuid))
+                .thenReturn(false);
+
+        AppObjectNotFoundException exception = assertThrows(
+                AppObjectNotFoundException.class,
+                () -> conversationService.getAllConversationsForUser(loggedInUserUuid)
+        );
+
+        assertEquals("User not found", exception.getMessage());
+
+        verify(userRepository).existsByUuid(loggedInUserUuid);
+        verifyNoInteractions(conversationRepository, conversationMapper);
+    }
+
+    @Test
+    void getConversationWhenConversationAndLoggedInUserExists() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        User loggedInUser = new User();
+        loggedInUser.setUuid(loggedInUserUuid);
+
+        Conversation conversation = new Conversation();
+
+        ConversationParticipantDto conversationParticipantDto = new ConversationParticipantDto();
+        conversationParticipantDto.setUuid(loggedInUserUuid);
+
+        ConversationReadDto expectedDto = new ConversationReadDto();
+        expectedDto.setParticipants(Set.of(conversationParticipantDto));
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        when(conversationMapper.mapToConversationReadDto(conversation))
+                .thenReturn(expectedDto);
+
+        ConversationReadDto actualDto = conversationService.getConversation(conversationUuid, loggedInUserUuid);
+
+        assertSame(expectedDto, actualDto);
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verify(conversationMapper).mapToConversationReadDto(conversation);
+    }
+
+    @Test
+    void getConversationWhenConversationNotFound() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.empty());
+
+        AppObjectNotFoundException exception = assertThrows(
+                AppObjectNotFoundException.class,
+                () -> conversationService.getConversation(conversationUuid, loggedInUserUuid)
+        );
+
+        assertEquals("Conversation not found", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verifyNoInteractions(conversationMapper);
+    }
+
+    @Test
+    void getConversationWhenLoggedInUserIsNotParticipant() {
+        UUID conversationUuid = UUID.randomUUID();
+        UUID loggedInUserUuid = UUID.randomUUID();
+        UUID otherUserUuid = UUID.randomUUID();
+
+        Conversation conversation = new Conversation();
+
+        ConversationParticipantDto participantDto = new ConversationParticipantDto();
+        participantDto.setUuid(otherUserUuid);
+
+        ConversationReadDto readDto = new ConversationReadDto();
+        readDto.setParticipants(Set.of(participantDto));
+
+        when(conversationRepository.findByUuid(conversationUuid))
+                .thenReturn(Optional.of(conversation));
+
+        when(conversationMapper.mapToConversationReadDto(conversation))
+                .thenReturn(readDto);
+
+        AppObjectAccessDeniedException exception = assertThrows(
+                AppObjectAccessDeniedException.class,
+                () -> conversationService.getConversation(conversationUuid, loggedInUserUuid)
+        );
+
+        assertEquals("You can only see your own conversation", exception.getMessage());
+
+        verify(conversationRepository).findByUuid(conversationUuid);
+        verify(conversationMapper).mapToConversationReadDto(conversation);
     }
 
 }
