@@ -71,7 +71,7 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
             UserDetails userDetails =
                     userDetailsService.loadUserByUsername(username);
 
-            if (!jwtService.isTokenValid(token, userDetails)) {
+            if (!userDetails.isEnabled() || !jwtService.isTokenValid(token, userDetails)) {
                 throw new MessagingException(
                         "Invalid WebSocket access token"
                 );
