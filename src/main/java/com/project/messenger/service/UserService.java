@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -98,7 +99,8 @@ public class UserService {
             throw new AppObjectUnauthorizedException("User", "The password is incorrect");
         }
 
-        userRepository.delete(user);
+        user.setDeleted(true);
+        user.setDeletedAt(LocalDateTime.now());
     }
 
 
