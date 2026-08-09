@@ -17,7 +17,7 @@ public class UserMapper {
         return new UserReadDto(
                 user.getId(),
                 user.getUuid(),
-                user.getUsername(),
+                user.isDeleted() ? "Deleted User" : user.getUsername(),
                 user.getEmail(),
                 user.getDateOfBirth(),
                 user.getPhoneNumber()
@@ -32,6 +32,7 @@ public class UserMapper {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setDateOfBirth(dto.getDateOfBirth());
         user.setPhoneNumber(dto.getPhoneNumber());
+        user.setDeleted(false);
 
         return user;
     }
