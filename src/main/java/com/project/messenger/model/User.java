@@ -30,6 +30,7 @@ public class User extends AbstractEntity implements UserDetails {
     private String username;
 
     @Email
+    @Column(nullable = false)
     private String email;
 
     @Column(nullable = false)
