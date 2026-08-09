@@ -264,9 +264,13 @@ public class UserServiceTest {
 
         userService.deleteCurrentUser(userUuid, rawPassword);
 
+        assertTrue(user.isDeleted());
+        assertNotNull(user.getDeletedAt());
+
+        verify(userRepository, never()).delete(any(User.class));
         verify(userRepository).findByUuid(userUuid);
         verify(passwordEncoder).matches(rawPassword, user.getPassword());
-        verify(userRepository).delete(user);
+
     }
 
     @Test
