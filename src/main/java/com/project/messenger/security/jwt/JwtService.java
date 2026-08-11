@@ -1,6 +1,5 @@
 package com.project.messenger.security.jwt;
 
-import com.project.messenger.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -19,8 +18,8 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    @Value("${jwt.access-token-expiration}")
+    private long jwtAccessTokenExpiration;
 
     private Key getSigninKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
@@ -32,7 +31,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .expiration(new Date(System.currentTimeMillis() + jwtAccessTokenExpiration))
                 .signWith(getSigninKey())
                 .compact();
     }
