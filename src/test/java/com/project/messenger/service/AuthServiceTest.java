@@ -28,6 +28,9 @@ public class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -35,6 +38,7 @@ public class AuthServiceTest {
     void authenticateUserSuccessfully() {
         LoginRequestDto requestDto = new LoginRequestDto("john", "Password1!");
         String accessToken = "generated.jwt.token";
+        String refreshToken = "generated.refresh.token";
 
         User user = new User();
         user.setUsername("john");
@@ -50,10 +54,14 @@ public class AuthServiceTest {
         when(jwtService.generateToken(user))
                 .thenReturn(accessToken);
 
+        when(refreshTokenService.issue(user))
+                .thenReturn(refreshToken);
+
         AuthResponseDto responseDto = authService.authenticate(requestDto);
 
         assertNotNull(responseDto);
-        assertEquals(accessToken, responseDto.getToken());
+        assertEquals(accessToken, responseDto.getAccessToken());
+        assertEquals(refreshToken, responseDto.getRefreshToken());
 
         ArgumentCaptor<Authentication> argumentCaptor = ArgumentCaptor.forClass(Authentication.class);
 
@@ -65,6 +73,7 @@ public class AuthServiceTest {
         assertEquals("Password1!", submittedAuthentication.getCredentials());
 
         verify(jwtService).generateToken(user);
+        verify(refreshTokenService).issue(user);
     }
 
     @Test
@@ -80,7 +89,45 @@ public class AuthServiceTest {
         );
 
         verify(authenticationManager).authenticate(any(Authentication.class));
-        verifyNoInteractions(jwtService);
+        verifyNoInteractions(jwtService, refreshTokenService);
     }
 
+    @Test
+    void refreshRotatesTokenSuccessfully() {
+        String oldRefreshToken = "old-refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+
+        User user = new User();
+        user.setUsername("john");
+
+        when(refreshTokenService.consume(oldRefreshToken))
+                .thenReturn(user);
+
+        when(jwtService.generateToken(user))
+                .thenReturn(newAccessToken);
+
+        when(refreshTokenService.issue(user))
+                .thenReturn(newRefreshToken);
+
+        AuthResponseDto response =
+                authService.refresh(oldRefreshToken);
+
+        assertEquals(newAccessToken, response.getAccessToken());
+        assertEquals(newRefreshToken, response.getRefreshToken());
+
+        verify(refreshTokenService).consume(oldRefreshToken);
+        verify(jwtService).generateToken(user);
+        verify(refreshTokenService).issue(user);
+    }
+
+    @Test
+    void logoutRevokesRefreshToken() {
+        String refreshToken = "refresh-token";
+
+        authService.logout(refreshToken);
+
+        verify(refreshTokenService).consume(refreshToken);
+        verifyNoInteractions(jwtService);
+    }
 }
